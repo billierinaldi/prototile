@@ -45,6 +45,7 @@ public class Ascension extends PApplet implements Serializable {
 	private float angle = 0.0f;
 	
 	public boolean sliding = false;
+	public boolean slidingPaused = false;
 	public boolean snapping = false;
 	public boolean inMotion = false;
 	public boolean animating = false;
@@ -96,6 +97,7 @@ public class Ascension extends PApplet implements Serializable {
 		noLoop();
 		waitWhileDrawing("waiting to load until drawing completes");
 		sliding = dis.readBoolean();
+		slidingPaused = true;
 		snapping = dis.readBoolean();
 		slideX = dis.readInt();
 		slideY = dis.readInt();
@@ -281,22 +283,41 @@ public class Ascension extends PApplet implements Serializable {
 		slideY = startY;
 	}
 	
-	private boolean lockSlide = false;
+	private boolean dragLock = false;
 	private int pressX = 0;
 	private int pressY = 0;
-	public void mousePressed() {
-		lockSlide = true;
-		pressX = mouseX;
-		pressY = mouseY;
-	}
 	
 	public void mouseDragged() {
-		grabAngle();
+		if (dragLock) {
+			grabAngle();
+		}
+		else {
+			dragLock = true;
+			pressX = mouseX;
+			pressY = mouseY;
+		}
 	}
 	
 	public void mouseReleased() {
-		grabAngle();
-		lockSlide = false;
+		if (mouseEvent.getClickCount()<=1) {
+			if (!dragLock) {
+				if (slidingPaused)
+					slidingPaused = false;
+				else
+					slidingPaused = true;
+			}
+			else {
+				slidingPaused = true;
+			}
+		} else {
+			if (dragLock==false) {
+				pressX = mouseX;
+				pressY = mouseY;				
+			}
+			grabAngle();
+			slidingPaused = false;
+		}
+		dragLock = false;
 	}
 	
 	private void grabAngle() {
@@ -329,7 +350,7 @@ public class Ascension extends PApplet implements Serializable {
 		img.loadPixels();
 		startDrawPix(depth);
 		img.updatePixels();
-		if (sliding && !lockSlide && !animating) {
+		if (sliding && !slidingPaused && !dragLock && !animating) {
 			slideX = mouseX-imgWidthPix/2;
 			slideY = mouseY-imgWidthPix/2;
 		}

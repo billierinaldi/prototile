@@ -60,9 +60,11 @@ Snap to Squares (on / off)
 When Slide is turned on, moving the mouse over the Display frame will move one 
 copy of the tiling over another.  If Snap to Squares is also turned on, the 
 sliding copy of the tiling will only appear at offsets that are even multiples of 
-the Square Size.  The sliding copy can also be rotated by clicking and dragging
-the mouse in the Display frame.  The angle rotated can be reset to zero by single
-clicking in the Display frame.
+the Square Size.  The sliding copy can be frozen in place with a single click, 
+then restarted with a single click.  The sliding copy can also be rotated by 
+clicking and dragging the mouse in the Display frame.  Rotating freezes sliding,
+but sliding can be restarted with a single click.  The angle rotated can be reset 
+to zero by double clicking in the Display frame.
 
 2b. Prototiles
 
@@ -84,7 +86,7 @@ the Speed slider.
 
 During animation, the display no longer responds to the mouse position, even if
 sliding is enabled.  However, the top tiling can still be rotated by clicking and
-dragging the mouse.  Rotation can be undone with a single click.
+dragging the mouse.  Rotation can be undone with a double click.
 
 4. Loading, Saving, and Exporting
 
