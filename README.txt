@@ -31,6 +31,10 @@ http://math.vassar.edu/Faculty/Frank/default.html
 Prototile has been tested with Java 1.6, Mac OS X Snow Leopard, Ubuntu 9.0.4, and 
 Windows Vista.
 
+0. Building
+
+mvn clean package
+
 1. Usage (single command line)
 
 java -Xmx1024m -Xms1024m 
@@ -98,4 +102,4 @@ effectively not saved due to the sensitivity of the sliding to the mouse positio
 The File Menu also contains an Export option (Ctrl-x).  Displays can be exported 
 in .tif, .tga, .jpg, and .png format by specifying the appropriate file extension.
 The default is .tif when the file extension is not specified, in which case .tif 
-is appended to the file name. 
+is appended to the file name.

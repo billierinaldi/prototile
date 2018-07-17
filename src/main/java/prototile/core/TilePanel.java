@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Billie Rinaldi
+ * Copyright (C) 2009-2018 Billie Rinaldi
  *
  * This file is part of Prototile.
  *
@@ -16,7 +16,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with Prototile.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package prototile.core;
 
 import java.awt.Color;
@@ -30,85 +29,85 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
 public class TilePanel extends JPanel {
-	private static final long serialVersionUID = -3914575469182549875L;
-	protected Ascension asc;
-	protected ColorListener cl;
-	protected JTabbedPane jtp;
-	protected int numTiles;
-	
-	protected class ColorListener implements ActionListener {
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			ColorUtil.printColors(asc.colorArray);
-			JButton jb = (JButton)e.getSource();
-			int buttonNum = Integer.parseInt(jb.getName());
-			
-			Color newColor = JColorChooser.showDialog(asc,
-					"Choose Color "+buttonNum,
-					new Color(asc.colorArray.get(buttonNum)));
-			if (newColor != null)
-				asc.colorArray.set(buttonNum, newColor.getRGB());
-			
-			ColorUtil.printColors(asc.colorArray);
-		}
-	}
-		
-	public TilePanel() {
-		super(new GridLayout(1,1));
-	}
-	
-	public static TilePanel init(Ascension asc) {
-		TilePanel sp = new TilePanel();
-		sp.cl = sp.new ColorListener();
-		sp.jtp = new JTabbedPane();
-		sp.jtp.addTab("Init", initTilePanel(asc.init,0,sp.cl,false));
-		int i = 0;
-		for (Tile t : asc.tiles) {
-			sp.jtp.addTab("Tile "+i, initTilePanel(t, i++, sp.cl, true));
-		}
-		sp.numTiles = asc.tiles.size(); 
-		sp.add(sp.jtp);
-		
-		return sp;
-	}
-	
-	public void addTile() {
-		numTiles++;
-		jtp.addTab("Tile "+(numTiles-1), initTilePanel(asc.tiles.get(numTiles-1), numTiles-1, cl, true));
-	}
-	
-	public void removeTile(int i) {
-		jtp.removeTabAt(i);
-		numTiles--;
-	}
-	
-	public void setNumColors(int newNumColors) {
-		while (newNumColors != numTiles) {
-			if (newNumColors < numTiles) {
-				removeTile(numTiles);
-			}
-			else if (newNumColors > numTiles) {
-				addTile();
-			}			
-		}
-	}
-	
-	protected static JPanel initTilePanel(Tile tile, int i, ActionListener al, boolean withButton) {
-		JPanel sJp = new JPanel();
-		if (withButton) {
-			JButton jb = new JButton("Color "+i);
-			jb.setName(""+i);
-			jb.addActionListener(al);
-			sJp.add(jb);
-		}
-		sJp.add(tile);
-		tile.init();
-		tile.registerMouseEvent(tile);
-		return sJp;
-	}
-		
-	public void informSizeChange() {
-		jtp.requestFocus();
-		jtp.repaint();
-	}
+  private static final long serialVersionUID = -3914575469182549875L;
+  protected Ascension asc;
+  protected ColorListener cl;
+  protected JTabbedPane jtp;
+  protected int numTiles;
+
+  protected class ColorListener implements ActionListener {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      ColorUtil.printColors(asc.colorArray);
+      JButton jb = (JButton) e.getSource();
+      int buttonNum = Integer.parseInt(jb.getName());
+
+      Color newColor = JColorChooser.showDialog(asc, "Choose Color "
+          + buttonNum, new Color(asc.colorArray.get(buttonNum)));
+      if (newColor != null)
+        asc.colorArray.set(buttonNum, newColor.getRGB());
+
+      ColorUtil.printColors(asc.colorArray);
+    }
+  }
+
+  public TilePanel() {
+    super(new GridLayout(1, 1));
+  }
+
+  public static TilePanel init(Ascension asc) {
+    TilePanel sp = new TilePanel();
+    sp.cl = sp.new ColorListener();
+    sp.jtp = new JTabbedPane();
+    sp.jtp.addTab("Init", initTilePanel(asc.init, 0, sp.cl, false));
+    int i = 0;
+    for (Tile t : asc.tiles) {
+      sp.jtp.addTab("Tile " + i, initTilePanel(t, i++, sp.cl, true));
+    }
+    sp.numTiles = asc.tiles.size();
+    sp.add(sp.jtp);
+
+    return sp;
+  }
+
+  public void addTile() {
+    numTiles++;
+    jtp.addTab("Tile " + (numTiles - 1),
+        initTilePanel(asc.tiles.get(numTiles - 1), numTiles - 1, cl, true));
+  }
+
+  public void removeTile(int i) {
+    jtp.removeTabAt(i);
+    numTiles--;
+  }
+
+  public void setNumColors(int newNumColors) {
+    while (newNumColors != numTiles) {
+      if (newNumColors < numTiles) {
+        removeTile(numTiles);
+      } else if (newNumColors > numTiles) {
+        addTile();
+      }
+    }
+  }
+
+  protected static JPanel initTilePanel(Tile tile, int i, ActionListener al,
+      boolean withButton) {
+    JPanel sJp = new JPanel();
+    if (withButton) {
+      JButton jb = new JButton("Color " + i);
+      jb.setName("" + i);
+      jb.addActionListener(al);
+      sJp.add(jb);
+    }
+    sJp.add(tile);
+    tile.init();
+    tile.registerMouseEvent(tile);
+    return sJp;
+  }
+
+  public void informSizeChange() {
+    jtp.requestFocus();
+    jtp.repaint();
+  }
 }
