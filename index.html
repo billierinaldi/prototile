@@ -1,0 +1,412 @@
+<!DOCTYPE html><meta charset="utf-8">
+<!--
+   Copyright 2018 Billie Rinaldi
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<head>
+  <title>prototile-js</title>
+  <style>
+    .svg-container {
+      display: inline-block;
+      position: relative;
+      width: 100%;
+      padding-bottom: 100%;
+      vertical-align: middle;
+      overflow: hidden;
+    }
+    .svg-content {
+      display: inline-block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    body {
+      font-family: "Lucida Console", Monaco, monospace;
+    }
+    h1 {
+      padding: 10px;
+    }
+    rect.tilingBorder {
+      stroke: gray;
+      fill: none;
+    }
+    text.title {
+      font-size: 12px;
+    }
+    form {
+      font-size: 14px;
+    }
+    form {
+      display: table;
+    }
+    p {
+      display: table-row;
+    }
+    label {
+      display: table-cell;
+      text-align: right;
+      padding: 5px 10px;
+    }
+    input {
+      display: table-cell; font-size: 14px;
+    }
+    input.number {
+      width: 50px;
+    }
+    input.button {
+      display: inline-block;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #fff;
+      background-color: #4CAF50;
+      outline: none;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px #aaa;
+    }
+    input.button:hover {
+      background-color: #3e8e41
+    }
+    input.button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 3px #999;
+      transform: translateY(1px);
+    }
+  </style>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+  <h1>prototile-js tiling generator</h1>
+  <form id="paramsForm">
+    <p><label># Colors</label><input class="number" type="number" name="colors" min="2" value="2">
+       <label>Initial Size</label><input class="number" type="number" name="substSize" min="1" value="1">
+       <label>Square Size (px)</label><input class="number" type="number" name="sqSize" min="1" value="10">
+       <label>Min Color</label><input type="color" value="#ffffff"></p>
+    <p><label># Iterations</label><input class="number" type="number" name="iterations" min="0" value="2">
+       <label>Substition Size</label><input class="number" type="number" name="substSize" min="2" value="5">
+       <label>Transparency</label><input class="number" type="number" name="transparency" min="0" max="1" step="0.1" value="0.5">
+       <label>Max Color</label><input type="color" value="#000000">
+       <label></label><input class="button" type="button" onclick="updateParams()" value="Update"></p>
+  </form><br>
+
+  <div class="svg-container">
+    <svg version="1.1" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMin meet" class="svg-content"></svg>
+  </div>
+
+  <script>
+// IDs for the SVG groups
+const INITIAL = "initial";
+const SUBSTITUTIONS = "substitutions";
+const SUBSTITUTION_PREFIX = "subst";
+const TILING = "tiling";
+const COPY = "copy";
+
+// Indices for the form inputs
+const NUM_COLORS_INDEX = 0;
+const INITIAL_SIZE_INDEX = 1;
+const SQUARE_SIZE_INDEX = 2;
+const COLOR_0_INDEX = 3;
+const NUM_ITERATIONS_INDEX = 4;
+const SUSBST_SIZE_INDEX = 5;
+const TRANSPARENCY_INDEX = 6;
+const COLOR_1_INDEX = 7;
+
+// Layout constants
+const MARGIN_WIDTH = 10;
+const MARGIN_HEIGHT = 20;
+const LEFT_PANEL_MIN_WIDTH = 110;
+
+// Tiling variables
+var squareSize = 10;
+var numColors = 2;
+var iterations = 2;
+var transparency = 0.5;
+var tilingColors = [d3.color("white"), d3.color("black")];
+tilingColors[0].opacity = transparency;
+tilingColors[1].opacity = transparency;
+var substColors = [d3.color("white"), d3.color("black")];
+
+// Initial tiling and substitution tiles consist of elements between 0 and numColors - 1.
+// The substitution tiles will be recursively substituted into the initial tiling for the
+// given number of iterations. For example, a 0 in the tiling will be replaced by
+// the matrix given in substitutionTiles[0], a 1 in the tiling will be replaced by the
+// matrix substitutionTiles[1], etc.
+var initialTiling = [[0]];
+var substitutionTiles = [
+  // 0 substitution:
+  [[0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [1, 1, 0, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 0, 0]],
+  // 1 substitution:
+  [[1, 1, 0, 1, 1], [1, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 0, 0, 1], [1, 1, 0, 1, 1]]
+];
+
+// SVG element
+var svg = d3.select("svg");
+
+// Resize a 1, 2, or 3 dimensional matrix to the specified dimensions,
+// setting any new entries to zero.
+var resize = function(matrix, x, y=null, z=null) {
+  if (x == null) {
+    // recursive resize is complete
+    return;
+  }
+  while (matrix.length > x) {
+    // matrix is too big, remove elements
+    matrix.pop();
+  }
+  while (matrix.length < x) {
+    // matrix is too small, add elements
+    if (y == null) {
+      // last iteration, add zero
+      matrix.push(0);
+    } else {
+      // not the last iteration, add a new array
+      matrix.push([]);
+    }
+  }
+  matrix.forEach(function(d) {
+    resize(d, y, z);
+  })
+}
+
+// Get form element value as a number.
+var getFormInput = function(formContents, index) {
+  return parseInt(formContents.elements[index].value);
+}
+
+// Read the tiling parameters from the form and update the display.
+var updateParams = function() {
+  var formContents = document.getElementById("paramsForm");
+
+  numColors = getFormInput(formContents, NUM_COLORS_INDEX);
+
+  var initialSize = getFormInput(formContents, INITIAL_SIZE_INDEX);
+  resize(initialTiling, initialSize, initialSize);
+  var substSize = getFormInput(formContents, SUSBST_SIZE_INDEX);
+  // resize the substitution tiles matrix so that there is
+  // a substSize x substSize substitution tile for each color
+  resize(substitutionTiles, numColors, substSize, substSize);
+  console.log("init", initialTiling);
+  console.log("subst", substitutionTiles);
+
+  iterations = getFormInput(formContents, NUM_ITERATIONS_INDEX);
+  squareSize = getFormInput(formContents, SQUARE_SIZE_INDEX);
+
+  transparency = formContents.elements[TRANSPARENCY_INDEX].value;
+  var hexColor0 = d3.color(formContents.elements[COLOR_0_INDEX].value)
+  var hexColor1 = d3.color(formContents.elements[COLOR_1_INDEX].value);
+
+  // give the substitution tiles no transparency so they are easier to see
+  var interpolator = d3.interpolate(hexColor0, hexColor1);
+  substColors = [];
+  for (var i = 0; i < numColors; i++) {
+    substColors.push(interpolator(i / (numColors - 1)));
+  }
+
+  // give the main tiling transparency in the same colors
+  hexColor0.opacity = transparency;
+  hexColor1.opacity = transparency;
+  interpolator = d3.interpolate(hexColor0, hexColor1);
+  tilingColors = [];
+  for (var i = 0; i < numColors; i++) {
+    tilingColors.push(interpolator(i / (numColors - 1)));
+  }
+
+  reposition();
+  redraw();
+}
+
+// Recursively create a substitution tiling matrix.
+var iterate = function(initial, substitution, iteration, maxIteration) {
+  if (iteration == maxIteration) {
+    // return if max iterations have been reached
+    return initial;
+  }
+
+  var substSize = substitution[0].length;
+  var nextIteration = [];
+
+  // start with an initial tiling
+  for (var i = 0; i < initial.length; i++) {
+    for (var k = 0; k < substSize; k++) {
+      // for each row of the initial tiling, create substSize rows in the next iteration
+      nextIteration[i*substSize + k] = [];
+    }
+    for (var j = 0; j < initial[i].length; j++) {
+      // for each element of the initial tiling, substitute the element with the corresponding substitution tile
+      var currentTile = substitution[initial[i][j]];
+      for (var k = 0; k < currentTile.length; k++) {
+        nextIteration[i*substSize + k].push.apply(nextIteration[i*substSize + k], currentTile[k]);
+      }
+    }
+  }
+  // repeat until max iterations have been reached
+  return iterate(nextIteration, substitution, iteration + 1, maxIteration);
+}
+
+// Create top level SVG groups.
+var initialize = function() {
+  // group for the initial tiling
+  var initGroup = svg.append("g")
+    .attr("id", INITIAL)
+    .attr("transform", "translate(" + MARGIN_WIDTH + ", " + MARGIN_HEIGHT + ")");
+  addBorder(initGroup, INITIAL);
+  addTitle(initGroup, "Initial");
+
+  // group for all the substitution tiles
+  var substitutionsGroup = svg.append("g")
+    .attr("id", SUBSTITUTIONS);
+
+  // groups for individual substitution tiles
+  positionSubstitutionTiles();
+  addTitle(svg.select("#" + SUBSTITUTION_PREFIX + "0"), "Substitions");
+
+  // copy of main tiling
+  svg.append("use")
+    .attr("id", COPY)
+    .attr("href", "#" + TILING);
+
+  // group for main tiling
+  var tilingGroup = svg.append("g")
+    .attr("id", TILING);
+  addBorder(tilingGroup, TILING);
+  positionTiling();
+}
+
+// Reposition groups in case elements have been resized.
+var reposition = function() {
+  positionSubstitutionTiles();
+  positionTiling();
+}
+
+// Position the substitution tiles.
+var positionSubstitutionTiles = function() {
+  var substRange = d3.range(0, substitutionTiles.length);
+  var substGroups = svg.select("#" + SUBSTITUTIONS).selectAll("g")
+    .data(substRange, function(d) { return d; });
+  substGroups.exit().remove();
+  substGroups.enter().append("g")
+    .attr("id", function(d) { return SUBSTITUTION_PREFIX + d; })
+    .append("rect")
+      .attr("id", function(d) { return SUBSTITUTION_PREFIX + d + "Border"; })
+      .attr("class", "tilingBorder");
+
+  var initPanelHeight = initialTiling.length * squareSize + 2.5 * MARGIN_HEIGHT;
+  var substPanelHeight = substitutionTiles[0].length * squareSize + squareSize;
+
+  substRange.forEach(function(d, i) {
+    svg.select("#" + SUBSTITUTION_PREFIX + d)
+      .attr("transform", "translate(" + MARGIN_WIDTH + ", " + (initPanelHeight + d * substPanelHeight) + ")");
+  });
+}
+
+// Position the main tiling.
+var positionTiling = function() {
+  var leftPanelWidth = Math.max(LEFT_PANEL_MIN_WIDTH,
+    Math.max(initialTiling[0].length, substitutionTiles[0][0].length) * squareSize + MARGIN_WIDTH + squareSize);
+  svg.select("#" + TILING)
+    .attr("transform", "translate(" + leftPanelWidth + ", " + 0 + ")");
+}
+
+// Add a border to a group.
+var addBorder = function(group, name) {
+  group.append("rect")
+    .attr("id", name + "Border")
+    .attr("class", "tilingBorder");
+}
+
+// Add a title to a group.
+var addTitle = function(group, title) {
+  group.append("text")
+    .text(title)
+    .attr("class", "title")
+    .attr("y", -5);
+}
+
+// Redraw initial, substitution, and main tiling.
+var redraw = function() {
+  displayTiling(INITIAL, initialTiling);
+  substitutionTiles.forEach(function(d, i) {
+    displayTiling(SUBSTITUTION_PREFIX + i, d);
+  })
+  displayTiling(TILING, iterate(initialTiling, substitutionTiles, 0, iterations));
+}
+
+// Display a tiling based on matrix data.
+var displayTiling = function(name, data) {
+  var tilingGroup = svg.select("#" + name);
+
+  // add row group for each row of data
+  var rows = tilingGroup.selectAll("g")
+    .data(data, function(d) { return d; });
+  rows.exit().remove();
+  rows = rows.enter().append("g")
+    .attr("class", function(d, i) { return "row"+i; })
+    .merge(rows)
+    .attr("transform", function(d, i) { return "translate(0," + i * squareSize + ")"; });
+
+  // add rectangle for each element of data
+  var rects = rows.selectAll("rect")
+    .data(function(d) { return d; });
+  rects.exit().remove();
+  rects.enter().append("rect")
+    .merge(rects)
+    .data(function(d) { return d; })
+    .attr("x", function(d, i, j) { return i * squareSize; })
+    .attr("width", squareSize)
+    .attr("height", squareSize)
+    .style("fill", function(d, i, j) {
+      if (name == TILING) {
+        // main tiling gets transparent colors
+        return tilingColors[d];
+      } else {
+        // substitution tiles get solid colors
+        return substColors[d];
+      }
+    })
+    .on("click", function(d, i, j) {
+      // get row and column index
+      var row = parseInt(this.parentNode.className.baseVal.substring(3));
+      var col = i;
+      // identify which tiling this is based on group name
+      var name = this.parentNode.parentNode.id;
+      if (name == INITIAL) {
+        // clicking on a square in the initial tiling changes its color
+        initialTiling[row][col] = (initialTiling[row][col] + 1) % numColors;
+        redraw();
+      } else if (name == TILING) {
+        // clicking on the main tiling translates the copy
+        svg.select("#" + COPY)
+          .transition()
+          .attr("transform", function(d, i) { return "translate(" + col * squareSize + "," + row * squareSize + ")"; });
+      } else if (name.startsWith(SUBSTITUTION_PREFIX)) {
+        // clicking on a square in the substitution tiles changes its color
+        var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
+        substitutionTiles[substIndex][row][col] = (substitutionTiles[substIndex][row][col] + 1) % numColors;
+        redraw();
+      }
+    })
+
+    // resize border rectangle to fit new dimensions
+    svg.select("#" + name + "Border")
+      .attr("width", data.length * squareSize)
+      .attr("height", data.length * squareSize);
+}
+
+// create initial display
+initialize();
+redraw();
+  </script>
+</body>
+</html>
