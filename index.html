@@ -90,15 +90,25 @@
 <body>
   <h1>prototile-js tiling generator</h1>
   <form id="paramsForm">
-    <p><label># Colors</label><input class="number" type="number" name="colors" min="2" value="2">
-       <label>Initial Size</label><input class="number" type="number" name="substSize" min="1" value="1">
-       <label>Square Size (px)</label><input class="number" type="number" name="sqSize" min="1" value="10">
-       <label>Min Color</label><input type="color" value="#ffffff"></p>
-    <p><label># Iterations</label><input class="number" type="number" name="iterations" min="0" value="2">
-       <label>Substition Size</label><input class="number" type="number" name="substSize" min="2" value="5">
-       <label>Transparency</label><input class="number" type="number" name="transparency" min="0" max="1" step="0.1" value="0.5">
-       <label>Max Color</label><input type="color" value="#000000">
-       <label></label><input class="button" type="button" onclick="updateParams()" value="Update"></p>
+    <p>
+      <label># Colors</label><input class="number" type="number" name="colors" min="2" max="10" value="2">
+      <label>Initial Size</label><input class="number" type="number" name="substSize" min="1" max="20" value="1">
+      <label>Square Size</label><input class="number" type="number" name="sqSize" min="1" max="50" value="10">
+    </p>
+    <p>
+      <label># Iterations</label><input class="number" type="number" name="iterations" min="0" max="4" value="2">
+      <label>Substition Size</label><input class="number" type="number" name="substSize" min="2" max="20" value="5">
+      <label>Transparency</label><input class="number" type="number" name="transparency" min="0" max="1" step="0.1" value="0.5">
+    </p>
+    <p>
+      <label>Min Color</label><input type="color" value="#ffffff">
+      <label>Offset Row</label><input class="number" type="number" id="offsetRow" name="offsetRow" min="0" step="0.5" value="0">
+    </p>
+      <label>Max Color</label><input type="color" value="#000000">
+      <label>Offset Column</label><input class="number" type="number" id="offsetColumn" name="offsetColumn" min="0" step="0.5" value="0">
+      <label></label><input class="button" type="button" onclick="updateParams()" value="Update">
+    <p>
+    </p>
   </form><br>
 
   <div class="svg-container">
@@ -117,11 +127,17 @@ const COPY = "copy";
 const NUM_COLORS_INDEX = 0;
 const INITIAL_SIZE_INDEX = 1;
 const SQUARE_SIZE_INDEX = 2;
-const COLOR_0_INDEX = 3;
-const NUM_ITERATIONS_INDEX = 4;
-const SUSBST_SIZE_INDEX = 5;
-const TRANSPARENCY_INDEX = 6;
-const COLOR_1_INDEX = 7;
+const NUM_ITERATIONS_INDEX = 3;
+const SUSBST_SIZE_INDEX = 4;
+const TRANSPARENCY_INDEX = 5;
+const COLOR_0_INDEX = 6;
+const OFFSET_ROW_INDEX = 7;
+const COLOR_1_INDEX = 8;
+const OFFSET_COLUMN_INDEX = 9;
+
+// IDs for offset inputs
+const OFFSET_ROW = "offsetRow";
+const OFFSET_COLUMN = "offsetColumn";
 
 // Layout constants
 const MARGIN_WIDTH = 10;
@@ -180,30 +196,35 @@ var resize = function(matrix, x, y=null, z=null) {
   })
 }
 
-// Get form element value as a number.
-var getFormInput = function(formContents, index) {
+// Get form element value as an int.
+var getFormInputInt = function(formContents, index) {
   return parseInt(formContents.elements[index].value);
+}
+
+// Get form element value as a string.
+var getFormInput = function(formContents, index) {
+  return formContents.elements[index].value;
 }
 
 // Read the tiling parameters from the form and update the display.
 var updateParams = function() {
   var formContents = document.getElementById("paramsForm");
 
-  numColors = getFormInput(formContents, NUM_COLORS_INDEX);
+  numColors = getFormInputInt(formContents, NUM_COLORS_INDEX);
 
-  var initialSize = getFormInput(formContents, INITIAL_SIZE_INDEX);
+  var initialSize = getFormInputInt(formContents, INITIAL_SIZE_INDEX);
   resize(initialTiling, initialSize, initialSize);
-  var substSize = getFormInput(formContents, SUSBST_SIZE_INDEX);
+  var substSize = getFormInputInt(formContents, SUSBST_SIZE_INDEX);
   // resize the substitution tiles matrix so that there is
   // a substSize x substSize substitution tile for each color
   resize(substitutionTiles, numColors, substSize, substSize);
   console.log("init", initialTiling);
   console.log("subst", substitutionTiles);
 
-  iterations = getFormInput(formContents, NUM_ITERATIONS_INDEX);
-  squareSize = getFormInput(formContents, SQUARE_SIZE_INDEX);
+  iterations = getFormInputInt(formContents, NUM_ITERATIONS_INDEX);
+  squareSize = getFormInputInt(formContents, SQUARE_SIZE_INDEX);
 
-  transparency = formContents.elements[TRANSPARENCY_INDEX].value;
+  transparency = getFormInput(formContents, TRANSPARENCY_INDEX);
   var hexColor0 = d3.color(formContents.elements[COLOR_0_INDEX].value)
   var hexColor1 = d3.color(formContents.elements[COLOR_1_INDEX].value);
 
@@ -222,6 +243,11 @@ var updateParams = function() {
   for (var i = 0; i < numColors; i++) {
     tilingColors.push(interpolator(i / (numColors - 1)));
   }
+
+  // position the copy tiling
+  var row = getFormInput(formContents, OFFSET_ROW_INDEX);
+  var col = getFormInput(formContents, OFFSET_COLUMN_INDEX);
+  positionCopy(row, col);
 
   reposition();
   redraw();
@@ -319,6 +345,13 @@ var positionTiling = function() {
     .attr("transform", "translate(" + leftPanelWidth + ", " + 0 + ")");
 }
 
+// Position the copy tiling.
+var positionCopy = function(row, col) {
+  svg.select("#" + COPY)
+    .transition()
+    .attr("transform", function(d, i) { return "translate(" + col * squareSize + "," + row * squareSize + ")"; });
+}
+
 // Add a border to a group.
 var addBorder = function(group, name) {
   group.append("rect")
@@ -346,6 +379,12 @@ var redraw = function() {
 // Display a tiling based on matrix data.
 var displayTiling = function(name, data) {
   var tilingGroup = svg.select("#" + name);
+
+  if (name == TILING) {
+    // set max offsets
+    document.getElementById(OFFSET_ROW).max = data.length;
+    document.getElementById(OFFSET_COLUMN).max = data[0].length;
+  }
 
   // add row group for each row of data
   var rows = tilingGroup.selectAll("g")
@@ -387,9 +426,9 @@ var displayTiling = function(name, data) {
         redraw();
       } else if (name == TILING) {
         // clicking on the main tiling translates the copy
-        svg.select("#" + COPY)
-          .transition()
-          .attr("transform", function(d, i) { return "translate(" + col * squareSize + "," + row * squareSize + ")"; });
+        positionCopy(row, col);
+        document.getElementById(OFFSET_ROW).value = row;
+        document.getElementById(OFFSET_COLUMN).value = col;
       } else if (name.startsWith(SUBSTITUTION_PREFIX)) {
         // clicking on a square in the substitution tiles changes its color
         var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
