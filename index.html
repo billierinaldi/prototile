@@ -309,7 +309,7 @@ var initialize = function() {
   // copy of main tiling
   svg.append("use")
     .attr("id", COPY)
-    .attr("href", "#" + TILING);
+    .attr("xlink:href", "#" + TILING);
 
   // group for main tiling
   var tilingGroup = svg.append("g")
