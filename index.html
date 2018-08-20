@@ -95,12 +95,13 @@
   <h1>prototile-js tiling generator</h1>
   <p>
     <a class="manual" href="manual.html">Instructions</a>
+    <a class="manual" onclick="downloadMatrix()" href="javascript:void(0);">Download Tiling Matrix</a>
   </p><br>
 
   <form id="paramsForm" action="javascript:void(0)">
     <p>
       <label># Colors</label><input class="number" type="number" name="colors" min="2" max="10" value="2">
-      <label>Initial Size</label><input class="number" type="number" name="substSize" min="1" max="20" value="1">
+      <label>Initial Size</label><input class="number" type="number" name="initialSize" min="1" max="20" value="1">
       <label>Square Size</label><input class="number" type="number" name="sqSize" min="1" max="50" value="10">
     </p>
     <p>
@@ -112,10 +113,10 @@
       <label>Min Color</label><input type="color" value="#ffffff">
       <label>Offset Row</label><input class="number" type="number" id="offsetRow" name="offsetRow" min="0" step="0.5" value="0">
     </p>
+    <p>
       <label>Max Color</label><input type="color" value="#000000">
       <label>Offset Column</label><input class="number" type="number" id="offsetColumn" name="offsetColumn" min="0" step="0.5" value="0">
       <label></label><input class="button" type="submit" onclick="updateParams()" value="Update">
-    <p>
     </p>
   </form><br>
 
@@ -259,6 +260,27 @@ var updateParams = function() {
 
   reposition();
   redraw();
+}
+
+// Download the tiling matrix.
+var downloadMatrix = function() {
+  // format the matrix as a string with space-separated elements and newline-separated rows
+  var matrix = iterate(initialTiling, substitutionTiles, 0, iterations);
+  for (var i = 0; i < matrix.length; i++) {
+    matrix[i] = matrix[i].join(' ');
+  }
+  matrix = matrix.join('\n');
+
+  // create and click an anchor element referencing the base64 encoded matrix
+  var a = document.createElement('a');
+  a.setAttribute('download', 'tiling.txt');
+  a.setAttribute('href', "data:text/attachment;base64," + window.btoa(unescape(encodeURIComponent(matrix))));
+  a.setAttribute('target', '_blank');
+  a.dispatchEvent(new MouseEvent('click', {
+    view: window,
+    bubbles: false,
+    cancelable: true
+  }));
 }
 
 // Recursively create a substitution tiling matrix.
