@@ -16,80 +16,9 @@
 -->
 <head>
   <title>prototile-js</title>
-  <style>
-    .svg-container {
-      display: inline-block;
-      position: relative;
-      width: 100%;
-      padding-bottom: 100%;
-      vertical-align: middle;
-      overflow: hidden;
-    }
-    .svg-content {
-      display: inline-block;
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-    body {
-      font-family: "Lucida Console", Monaco, monospace;
-    }
-    h1 {
-      padding: 10px;
-    }
-    a.manual {
-      padding: 10px;
-      font-size: 12px;
-    }
-    rect.tilingBorder {
-      stroke: gray;
-      fill: none;
-    }
-    text.title {
-      font-size: 12px;
-    }
-    form {
-      font-size: 14px;
-    }
-    form {
-      display: table;
-    }
-    p {
-      display: table-row;
-    }
-    label {
-      display: table-cell;
-      text-align: right;
-      padding: 5px 10px;
-    }
-    input {
-      display: table-cell; font-size: 14px;
-    }
-    input.number {
-      width: 50px;
-    }
-    input.button {
-      display: inline-block;
-      padding: 5px 10px;
-      font-size: 14px;
-      cursor: pointer;
-      color: #fff;
-      background-color: #4CAF50;
-      outline: none;
-      border: none;
-      border-radius: 10px;
-      box-shadow: 0 4px #aaa;
-    }
-    input.button:hover {
-      background-color: #3e8e41
-    }
-    input.button:active {
-      background-color: #3e8e41;
-      box-shadow: 0 3px #999;
-      transform: translateY(1px);
-    }
-  </style>
+  <link rel="stylesheet" type="text/css" href="prototile.css">
   <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="prototile.js"></script>
 </head>
 <body>
   <h1>prototile-js tiling generator</h1>
@@ -163,47 +92,20 @@ tilingColors[0].opacity = transparency;
 tilingColors[1].opacity = transparency;
 var substColors = [d3.color("white"), d3.color("black")];
 
-// Initial tiling and substitution tiles consist of elements between 0 and numColors - 1.
-// The substitution tiles will be recursively substituted into the initial tiling for the
-// given number of iterations. For example, a 0 in the tiling will be replaced by
-// the matrix given in substitutionTiles[0], a 1 in the tiling will be replaced by the
-// matrix substitutionTiles[1], etc.
-var initialTiling = [[0]];
-var substitutionTiles = [
-  // 0 substitution:
-  [[0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [1, 1, 0, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 0, 0]],
-  // 1 substitution:
-  [[1, 1, 0, 1, 1], [1, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 0, 0, 1], [1, 1, 0, 1, 1]]
-];
+// Substitution tiling creator
+var prototile = new Prototile(
+  // initial tiling
+  [[0]],
+  // substitution tiles
+  [ // 0 substitution:
+    [[0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [1, 1, 0, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 0, 0]],
+    // 1 substitution:
+    [[1, 1, 0, 1, 1], [1, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 0, 0, 1], [1, 1, 0, 1, 1]]
+  ]
+);
 
 // SVG element
 var svg = d3.select("svg");
-
-// Resize a 1, 2, or 3 dimensional matrix to the specified dimensions,
-// setting any new entries to zero.
-var resize = function(matrix, x, y=null, z=null) {
-  if (x == null) {
-    // recursive resize is complete
-    return;
-  }
-  while (matrix.length > x) {
-    // matrix is too big, remove elements
-    matrix.pop();
-  }
-  while (matrix.length < x) {
-    // matrix is too small, add elements
-    if (y == null) {
-      // last iteration, add zero
-      matrix.push(0);
-    } else {
-      // not the last iteration, add a new array
-      matrix.push([]);
-    }
-  }
-  matrix.forEach(function(d) {
-    resize(d, y, z);
-  })
-}
 
 // Get form element value as an int.
 var getFormInputInt = function(formContents, index) {
@@ -222,13 +124,13 @@ var updateParams = function() {
   numColors = getFormInputInt(formContents, NUM_COLORS_INDEX);
 
   var initialSize = getFormInputInt(formContents, INITIAL_SIZE_INDEX);
-  resize(initialTiling, initialSize, initialSize);
+  prototile.resizeInitialTiling(initialSize, initialSize);
   var substSize = getFormInputInt(formContents, SUSBST_SIZE_INDEX);
   // resize the substitution tiles matrix so that there is
   // a substSize x substSize substitution tile for each color
-  resize(substitutionTiles, numColors, substSize, substSize);
-  console.log("init", initialTiling);
-  console.log("subst", substitutionTiles);
+  prototile.resizeSubstitutionTiles(numColors, substSize, substSize);
+  console.log("init", prototile.initialTiling);
+  console.log("subst", prototile.substitutionTiles);
 
   iterations = getFormInputInt(formContents, NUM_ITERATIONS_INDEX);
   squareSize = getFormInputInt(formContents, SQUARE_SIZE_INDEX);
@@ -265,11 +167,7 @@ var updateParams = function() {
 // Download the tiling matrix.
 var downloadMatrix = function() {
   // format the matrix as a string with space-separated elements and newline-separated rows
-  var matrix = iterate(initialTiling, substitutionTiles, 0, iterations);
-  for (var i = 0; i < matrix.length; i++) {
-    matrix[i] = matrix[i].join(' ');
-  }
-  matrix = matrix.join('\n');
+  var matrix = prototile.getTilingAsString(iterations);
 
   // create and click an anchor element referencing the base64 encoded matrix
   var a = document.createElement('a');
@@ -281,34 +179,6 @@ var downloadMatrix = function() {
     bubbles: false,
     cancelable: true
   }));
-}
-
-// Recursively create a substitution tiling matrix.
-var iterate = function(initial, substitution, iteration, maxIteration) {
-  if (iteration == maxIteration) {
-    // return if max iterations have been reached
-    return initial;
-  }
-
-  var substSize = substitution[0].length;
-  var nextIteration = [];
-
-  // start with an initial tiling
-  for (var i = 0; i < initial.length; i++) {
-    for (var k = 0; k < substSize; k++) {
-      // for each row of the initial tiling, create substSize rows in the next iteration
-      nextIteration[i*substSize + k] = [];
-    }
-    for (var j = 0; j < initial[i].length; j++) {
-      // for each element of the initial tiling, substitute the element with the corresponding substitution tile
-      var currentTile = substitution[initial[i][j]];
-      for (var k = 0; k < currentTile.length; k++) {
-        nextIteration[i*substSize + k].push.apply(nextIteration[i*substSize + k], currentTile[k]);
-      }
-    }
-  }
-  // repeat until max iterations have been reached
-  return iterate(nextIteration, substitution, iteration + 1, maxIteration);
 }
 
 // Create top level SVG groups.
@@ -340,48 +210,6 @@ var initialize = function() {
   positionTiling();
 }
 
-// Reposition groups in case elements have been resized.
-var reposition = function() {
-  positionSubstitutionTiles();
-  positionTiling();
-}
-
-// Position the substitution tiles.
-var positionSubstitutionTiles = function() {
-  var substRange = d3.range(0, substitutionTiles.length);
-  var substGroups = svg.select("#" + SUBSTITUTIONS).selectAll("g")
-    .data(substRange, function(d) { return d; });
-  substGroups.exit().remove();
-  substGroups.enter().append("g")
-    .attr("id", function(d) { return SUBSTITUTION_PREFIX + d; })
-    .append("rect")
-      .attr("id", function(d) { return SUBSTITUTION_PREFIX + d + "Border"; })
-      .attr("class", "tilingBorder");
-
-  var initPanelHeight = initialTiling.length * squareSize + 2.5 * MARGIN_HEIGHT;
-  var substPanelHeight = substitutionTiles[0].length * squareSize + squareSize;
-
-  substRange.forEach(function(d, i) {
-    svg.select("#" + SUBSTITUTION_PREFIX + d)
-      .attr("transform", "translate(" + MARGIN_WIDTH + ", " + (initPanelHeight + d * substPanelHeight) + ")");
-  });
-}
-
-// Position the main tiling.
-var positionTiling = function() {
-  var leftPanelWidth = Math.max(LEFT_PANEL_MIN_WIDTH,
-    Math.max(initialTiling[0].length, substitutionTiles[0][0].length) * squareSize + MARGIN_WIDTH + squareSize);
-  svg.select("#" + TILING)
-    .attr("transform", "translate(" + leftPanelWidth + ", " + 0 + ")");
-}
-
-// Position the copy tiling.
-var positionCopy = function(row, col) {
-  svg.select("#" + COPY)
-    .transition()
-    .attr("transform", function(d, i) { return "translate(" + col * squareSize + "," + row * squareSize + ")"; });
-}
-
 // Add a border to a group.
 var addBorder = function(group, name) {
   group.append("rect")
@@ -397,13 +225,55 @@ var addTitle = function(group, title) {
     .attr("y", -5);
 }
 
+// Reposition groups in case elements have been resized.
+var reposition = function() {
+  positionSubstitutionTiles();
+  positionTiling();
+}
+
+// Position the substitution tiles.
+var positionSubstitutionTiles = function() {
+  var substRange = d3.range(0, prototile.substitutionTiles.length);
+  var substGroups = svg.select("#" + SUBSTITUTIONS).selectAll("g")
+    .data(substRange, function(d) { return d; });
+  substGroups.exit().remove();
+  substGroups.enter().append("g")
+    .attr("id", function(d) { return SUBSTITUTION_PREFIX + d; })
+    .append("rect")
+      .attr("id", function(d) { return SUBSTITUTION_PREFIX + d + "Border"; })
+      .attr("class", "tilingBorder");
+
+  var initPanelHeight = prototile.initialTiling.length * squareSize + 2.5 * MARGIN_HEIGHT;
+  var substPanelHeight = prototile.substitutionTiles[0].length * squareSize + squareSize;
+
+  substRange.forEach(function(d, i) {
+    svg.select("#" + SUBSTITUTION_PREFIX + d)
+      .attr("transform", "translate(" + MARGIN_WIDTH + ", " + (initPanelHeight + d * substPanelHeight) + ")");
+  });
+}
+
+// Position the main tiling.
+var positionTiling = function() {
+  var leftPanelWidth = Math.max(LEFT_PANEL_MIN_WIDTH,
+    Math.max(prototile.initialTiling[0].length, prototile.substitutionTiles[0][0].length) * squareSize + MARGIN_WIDTH + squareSize);
+  svg.select("#" + TILING)
+    .attr("transform", "translate(" + leftPanelWidth + ", " + 0 + ")");
+}
+
+// Position the copy tiling.
+var positionCopy = function(row, col) {
+  svg.select("#" + COPY)
+    .transition()
+    .attr("transform", function(d, i) { return "translate(" + col * squareSize + "," + row * squareSize + ")"; });
+}
+
 // Redraw initial, substitution, and main tiling.
 var redraw = function() {
-  displayTiling(INITIAL, initialTiling);
-  substitutionTiles.forEach(function(d, i) {
+  displayTiling(INITIAL, prototile.initialTiling);
+  prototile.substitutionTiles.forEach(function(d, i) {
     displayTiling(SUBSTITUTION_PREFIX + i, d);
   })
-  displayTiling(TILING, iterate(initialTiling, substitutionTiles, 0, iterations));
+  displayTiling(TILING, prototile.iterate(iterations));
 }
 
 // Display a tiling based on matrix data.
@@ -452,7 +322,7 @@ var displayTiling = function(name, data) {
       var name = this.parentNode.parentNode.id;
       if (name == INITIAL) {
         // clicking on a square in the initial tiling changes its color
-        initialTiling[row][col] = (initialTiling[row][col] + 1) % numColors;
+        prototile.initialTiling[row][col] = (prototile.initialTiling[row][col] + 1) % numColors;
         redraw();
       } else if (name == TILING) {
         // clicking on the main tiling translates the copy
@@ -462,7 +332,7 @@ var displayTiling = function(name, data) {
       } else if (name.startsWith(SUBSTITUTION_PREFIX)) {
         // clicking on a square in the substitution tiles changes its color
         var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
-        substitutionTiles[substIndex][row][col] = (substitutionTiles[substIndex][row][col] + 1) % numColors;
+        prototile.substitutionTiles[substIndex][row][col] = (prototile.substitutionTiles[substIndex][row][col] + 1) % numColors;
         redraw();
       }
     })
