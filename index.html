@@ -27,11 +27,11 @@
     <a class="manual" onclick="downloadMatrix()" href="javascript:void(0);">Download Tiling Matrix</a>
   </p><br>
 
-  <form id="paramsForm" action="javascript:void(0)">
+  <form id="paramsForm" action="">
     <p>
-      <label># Colors</label><input class="number" type="number" name="colors" min="2" max="10" value="2">
+      <label># Colors</label><input class="number" type="number" name="numColors" min="2" max="10" value="2">
       <label>Initial Size</label><input class="number" type="number" name="initialSize" min="1" max="20" value="1">
-      <label>Square Size</label><input class="number" type="number" name="sqSize" min="1" max="50" value="10">
+      <label>Square Size</label><input class="number" type="number" name="squareSize" min="1" max="50" value="10">
     </p>
     <p>
       <label># Iterations</label><input class="number" type="number" name="iterations" min="0" max="4" value="2">
@@ -39,14 +39,16 @@
       <label>Transparency</label><input class="number" type="number" name="transparency" min="0" max="1" step="0.1" value="0.5">
     </p>
     <p>
-      <label>Min Color</label><input type="color" value="#ffffff">
-      <label>Offset Row</label><input class="number" type="number" id="offsetRow" name="offsetRow" min="0" step="0.5" value="0">
+      <label>Min Color</label><input type="color" name="minColor" value="#ffffff">
+      <label>Offset Row</label><input class="number" type="number" name="offsetRow" min="0" step="0.5" value="0">
     </p>
     <p>
-      <label>Max Color</label><input type="color" value="#000000">
-      <label>Offset Column</label><input class="number" type="number" id="offsetColumn" name="offsetColumn" min="0" step="0.5" value="0">
+      <label>Max Color</label><input type="color" name="maxColor" value="#000000">
+      <label>Offset Column</label><input class="number" type="number" name="offsetColumn" min="0" step="0.5" value="0">
       <label></label><input class="button" type="submit" onclick="updateParams()" value="Update">
     </p>
+    <input type="hidden" name="initial" value="0">
+    <input type="hidden" name="substitutions" value="0010001110110110111000100,1101110001001001000111011">
   </form><br>
 
   <div class="svg-container">
@@ -61,21 +63,20 @@ const SUBSTITUTION_PREFIX = "subst";
 const TILING = "tiling";
 const COPY = "copy";
 
-// Indices for the form inputs
-const NUM_COLORS_INDEX = 0;
-const INITIAL_SIZE_INDEX = 1;
-const SQUARE_SIZE_INDEX = 2;
-const NUM_ITERATIONS_INDEX = 3;
-const SUSBST_SIZE_INDEX = 4;
-const TRANSPARENCY_INDEX = 5;
-const COLOR_0_INDEX = 6;
-const OFFSET_ROW_INDEX = 7;
-const COLOR_1_INDEX = 8;
-const OFFSET_COLUMN_INDEX = 9;
+const FORM_ID = "paramsForm"
 
-// IDs for offset inputs
+// Names for the form inputs
+const NUM_COLORS = "numColors";
+const INITIAL_SIZE = "initialSize";
+const SQUARE_SIZE = "squareSize";
+const NUM_ITERATIONS = "iterations";
+const SUSBST_SIZE = "substSize";
+const TRANSPARENCY = "transparency";
+const MIN_COLOR = "minColor";
+const MAX_COLOR = "maxColor"
 const OFFSET_ROW = "offsetRow";
 const OFFSET_COLUMN = "offsetColumn";
+// INITIAL and SUBSTITUTIONS are already initialized
 
 // Layout constants
 const MARGIN_WIDTH = 10;
@@ -101,43 +102,60 @@ var prototile = new Prototile(
     [[0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [1, 1, 0, 1, 1], [0, 1, 1, 1, 0], [0, 0, 1, 0, 0]],
     // 1 substitution:
     [[1, 1, 0, 1, 1], [1, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 0, 0, 1], [1, 1, 0, 1, 1]]
-  ]
+  ],
+  numColors
 );
 
 // SVG element
 var svg = d3.select("svg");
 
+// Read form values from URL.
+var populateFormFromURL = function() {
+  var formContents = document.getElementById(FORM_ID);
+  var url = decodeURIComponent(window.location.search);
+  var regex = /[?&]([a-zA-Z]+)=([0-9,]+(.5)?|#[0-9a-fA-F]{6})/g;
+  var match = regex.exec(url);
+  while (match != null) {
+    if (formContents.elements[match[1]]) {
+      formContents.elements[match[1]].value = match[2];
+    }
+    match = regex.exec(url);
+  }
+  updateParams();
+}
+
 // Get form element value as an int.
-var getFormInputInt = function(formContents, index) {
-  return parseInt(formContents.elements[index].value);
+var getFormInputInt = function(formContents, name) {
+  return parseInt(formContents.elements[name].value);
 }
 
 // Get form element value as a string.
-var getFormInput = function(formContents, index) {
-  return formContents.elements[index].value;
+var getFormInput = function(formContents, name) {
+  return formContents.elements[name].value;
 }
 
 // Read the tiling parameters from the form and update the display.
 var updateParams = function() {
-  var formContents = document.getElementById("paramsForm");
+  var formContents = document.getElementById(FORM_ID);
 
-  numColors = getFormInputInt(formContents, NUM_COLORS_INDEX);
+  numColors = getFormInputInt(formContents, NUM_COLORS);
+  prototile.numColors = numColors;
 
-  var initialSize = getFormInputInt(formContents, INITIAL_SIZE_INDEX);
+  var initialSize = getFormInputInt(formContents, INITIAL_SIZE);
   prototile.resizeInitialTiling(initialSize, initialSize);
-  var substSize = getFormInputInt(formContents, SUSBST_SIZE_INDEX);
+  var substSize = getFormInputInt(formContents, SUSBST_SIZE);
   // resize the substitution tiles matrix so that there is
   // a substSize x substSize substitution tile for each color
   prototile.resizeSubstitutionTiles(numColors, substSize, substSize);
   console.log("init", prototile.initialTiling);
   console.log("subst", prototile.substitutionTiles);
 
-  iterations = getFormInputInt(formContents, NUM_ITERATIONS_INDEX);
-  squareSize = getFormInputInt(formContents, SQUARE_SIZE_INDEX);
+  iterations = getFormInputInt(formContents, NUM_ITERATIONS);
+  squareSize = getFormInputInt(formContents, SQUARE_SIZE);
 
-  transparency = getFormInput(formContents, TRANSPARENCY_INDEX);
-  var hexColor0 = d3.color(formContents.elements[COLOR_0_INDEX].value)
-  var hexColor1 = d3.color(formContents.elements[COLOR_1_INDEX].value);
+  transparency = getFormInput(formContents, TRANSPARENCY);
+  var hexColor0 = d3.color(formContents.elements[MIN_COLOR].value)
+  var hexColor1 = d3.color(formContents.elements[MAX_COLOR].value);
 
   // give the substitution tiles no transparency so they are easier to see
   var interpolator = d3.interpolate(hexColor0, hexColor1);
@@ -156,9 +174,12 @@ var updateParams = function() {
   }
 
   // position the copy tiling
-  var row = getFormInput(formContents, OFFSET_ROW_INDEX);
-  var col = getFormInput(formContents, OFFSET_COLUMN_INDEX);
+  var row = getFormInput(formContents, OFFSET_ROW);
+  var col = getFormInput(formContents, OFFSET_COLUMN);
   positionCopy(row, col);
+
+  prototile.setInitialFromString(getFormInput(formContents, INITIAL));
+  prototile.setSubstitutionsFromString(getFormInput(formContents, SUBSTITUTIONS));
 
   reposition();
   redraw();
@@ -282,8 +303,8 @@ var displayTiling = function(name, data) {
 
   if (name == TILING) {
     // set max offsets
-    document.getElementById(OFFSET_ROW).max = data.length;
-    document.getElementById(OFFSET_COLUMN).max = data[0].length;
+    document.getElementById(FORM_ID).elements[OFFSET_ROW].max = data.length;
+    document.getElementById(FORM_ID).elements[OFFSET_COLUMN].max = data[0].length;
   }
 
   // add row group for each row of data
@@ -327,8 +348,8 @@ var displayTiling = function(name, data) {
       } else if (name == TILING) {
         // clicking on the main tiling translates the copy
         positionCopy(row, col);
-        document.getElementById(OFFSET_ROW).value = row;
-        document.getElementById(OFFSET_COLUMN).value = col;
+        document.getElementById(FORM_ID).elements[OFFSET_ROW].value = row;
+        document.getElementById(FORM_ID).elements[OFFSET_COLUMN].value = col;
       } else if (name.startsWith(SUBSTITUTION_PREFIX)) {
         // clicking on a square in the substitution tiles changes its color
         var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
@@ -345,6 +366,7 @@ var displayTiling = function(name, data) {
 
 // create initial display
 initialize();
+populateFormFromURL();
 redraw();
   </script>
 </body>

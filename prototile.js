@@ -24,9 +24,10 @@
  * the matrix given in substitutionTiles[0], a 1 in the tiling will be replaced by the
  * matrix substitutionTiles[1], etc.
  */
-function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
+function Prototile(initialTiling=[[]], substitutionTiles=[[[]]], numColors=2) {
   this.initialTiling = initialTiling;
   this.substitutionTiles = substitutionTiles;
+  this.numColors = numColors;
 
   // Recursively create a substitution tiling matrix.
   this.iterate = function(maxIteration, iteration=0, previousTiling=this.initialTiling) {
@@ -64,6 +65,52 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
       matrix[i] = matrix[i].join(colSep);
     }
     return matrix.join(rowSep);
+  }
+
+  // Set initial tiling from a string.
+  this.setInitialFromString = function(s) {
+    var matrix = this.initialTiling;
+    var k = 0;
+    for (var i = 0; i < matrix.length; i++) {
+      for (var j = 0; j < matrix[i].length; j++) {
+        if (k == s.length || s[k] == ',') {
+          matrix[i][j] = 0;
+          continue;
+        }
+        matrix[i][j] = parseInt(s[k]);
+        if (matrix[i][j] >= numColors) {
+          matrix[i][j] = 0;
+        }
+        k++;
+      }
+      if (k < s.length && s[k] == ',') {
+        k++;
+      }
+    }
+  }
+
+  // Set substitutions from a string.
+  this.setSubstitutionsFromString = function(s) {
+    var matrix = this.substitutionTiles;
+    var l = 0;
+    for (var i = 0; i < matrix.length; i++) {
+      for (var j = 0; j < matrix[i].length; j++) {
+        for (var k = 0; k < matrix[i][j].length; k++) {
+          if (l == s.length || s[l] == ',') {
+            matrix[i][j][k] = 0;
+            continue;
+          }
+          matrix[i][j][k] = parseInt(s[l]);
+          if (matrix[i][j][k] >= numColors) {
+            matrix[i][j][k] = 0;
+          }
+          l++;
+        }
+        if (l < s.length && s[l] == ',') {
+          l++;
+        }
+      }
+    }
   }
 
   // Resize the initial tiling.
