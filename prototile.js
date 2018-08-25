@@ -61,10 +61,33 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]], numColors=2) {
   // with the given row and column separators.
   this.getTilingAsString = function(maxIteration, colSep=' ', rowSep='\n') {
     var matrix = this.iterate(iterations);
-    for (var i = 0; i < matrix.length; i++) {
-      matrix[i] = matrix[i].join(colSep);
+    return formatString(matrix);
+  }
+
+  // Convert the initial tiling to a string with the given row and column separators.
+  this.getInitialTilingAsString = function(colSep='', rowSep='') {
+    return formatString(this.initialTiling, colSep, rowSep);
+  }
+
+  // Convert the substitutions to a string with the given separators.
+  this.getSubstitutionsAsString = function(colSep='', rowSep='', tileSep=',') {
+    return formatString(this.substitutionTiles, colSep, rowSep, tileSep);
+  }
+
+  // Convert a matrix to a string with the given row and column separators.
+  var formatString = function(matrix, colSep=' ', rowSep='\n', tileSep=null) {
+    var strArr = [];
+    if (tileSep) {
+      matrix.forEach(function(tile) {
+        strArr.push(formatString(tile, colSep, rowSep));
+      });
+      return strArr.join(tileSep);
+    } else {
+      matrix.forEach(function(row) {
+        strArr.push(row.join(colSep));
+      });
+      return strArr.join(rowSep);
     }
-    return matrix.join(rowSep);
   }
 
   // Set initial tiling from a string.

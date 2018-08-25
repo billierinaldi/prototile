@@ -27,7 +27,7 @@
     <a class="manual" onclick="downloadMatrix()" href="javascript:void(0);">Download Tiling Matrix</a>
   </p><br>
 
-  <form id="paramsForm" action="">
+  <form id="paramsForm" action="index.html">
     <p>
       <label># Colors</label><input class="number" type="number" name="numColors" min="2" max="10" value="2">
       <label>Initial Size</label><input class="number" type="number" name="initialSize" min="1" max="20" value="1">
@@ -217,7 +217,7 @@ var initialize = function() {
 
   // groups for individual substitution tiles
   positionSubstitutionTiles();
-  addTitle(svg.select("#" + SUBSTITUTION_PREFIX + "0"), "Substitions");
+  addTitle(svg.select("#" + SUBSTITUTION_PREFIX + "0"), "Substitutions");
 
   // copy of main tiling
   svg.append("use")
@@ -344,6 +344,7 @@ var displayTiling = function(name, data) {
       if (name == INITIAL) {
         // clicking on a square in the initial tiling changes its color
         prototile.initialTiling[row][col] = (prototile.initialTiling[row][col] + 1) % numColors;
+        document.getElementById(FORM_ID).elements[INITIAL].value = prototile.getInitialTilingAsString();
         redraw();
       } else if (name == TILING) {
         // clicking on the main tiling translates the copy
@@ -354,6 +355,7 @@ var displayTiling = function(name, data) {
         // clicking on a square in the substitution tiles changes its color
         var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
         prototile.substitutionTiles[substIndex][row][col] = (prototile.substitutionTiles[substIndex][row][col] + 1) % numColors;
+        document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
         redraw();
       }
     })
