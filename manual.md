@@ -9,8 +9,11 @@ Additional information about substitution tilings can be found on
 [Wikipedia][1] and on Dr. Natalie Priebe Frank's [tiling page][2], which also
 features a Matlab-based relative of Prototile.
 
+Prototile uses [D3][3] to bind the tilings it creates to objects in an HTML document.
+
 [1]: http://en.wikipedia.org/wiki/Substitution_tiling
 [2]: https://pages.vassar.edu/nafrank/tiling-art/
+[3]: https://d3js.org/
 
 ## Instructions
 
