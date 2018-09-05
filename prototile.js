@@ -24,10 +24,10 @@
  * the matrix given in substitutionTiles[0], a 1 in the tiling will be replaced by the
  * matrix substitutionTiles[1], etc.
  */
-function Prototile(initialTiling=[[]], substitutionTiles=[[[]]], numColors=2) {
+function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
   this.initialTiling = initialTiling;
   this.substitutionTiles = substitutionTiles;
-  this.numColors = numColors;
+  this.numColors = substitutionTiles.length;
 
   // Recursively create a substitution tiling matrix.
   this.iterate = function(maxIteration, iteration=0, previousTiling=this.initialTiling) {
@@ -36,20 +36,24 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]], numColors=2) {
       return previousTiling;
     }
 
-    var substSize = this.substitutionTiles[0].length;
     var nextIteration = [];
 
     // start with an initial tiling
-    for (var i = 0; i < previousTiling.length; i++) {
-      for (var k = 0; k < substSize; k++) {
-        // for each row of the initial tiling, create substSize rows in the next iteration
-        nextIteration[i*substSize + k] = [];
-      }
-      for (var j = 0; j < previousTiling[i].length; j++) {
+    for (var j = 0; j < previousTiling[0].length; j++) {
+      // iterate over columns
+      var currentRow = 0;
+      for (var i = 0; i < previousTiling.length; i++) {
+        // iterate over rows
         // for each element of the initial tiling, substitute the element with the corresponding substitution tile
         var currentTile = this.substitutionTiles[previousTiling[i][j]];
         for (var k = 0; k < currentTile.length; k++) {
-          nextIteration[i*substSize + k].push.apply(nextIteration[i*substSize + k], currentTile[k]);
+          if (currentRow >= nextIteration.length) {
+            // if the row doesn't exist yet, create an array for it
+            nextIteration.push([]);
+          }
+          // append to current row and increment current row
+          nextIteration[currentRow].push.apply(nextIteration[currentRow], currentTile[k]);
+          currentRow++;
         }
       }
     }
@@ -57,11 +61,25 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]], numColors=2) {
     return this.iterate(maxIteration, iteration + 1, nextIteration);
   };
 
+  // Get tiling as points.
+  this.getTilingAsPoints = function(maxIteration) {
+    var matrix = this.iterate(maxIteration);
+    var points = [];
+    matrix.forEach(function(row, i) {
+      row.forEach(function(cell, j) {
+        if (cell > 0) {
+          points.push([i, j]);
+        }
+      });
+    });
+    return points;
+  }
+
   // Create the substitution tiling matrix and return the value as a string
   // with the given row and column separators.
   this.getTilingAsString = function(maxIteration, colSep=' ', rowSep='\n') {
-    var matrix = this.iterate(iterations);
-    return formatString(matrix);
+    var matrix = this.iterate(maxIteration);
+    return formatString(matrix, colSep, rowSep);
   }
 
   // Convert the initial tiling to a string with the given row and column separators.
