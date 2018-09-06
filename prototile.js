@@ -27,7 +27,6 @@
 function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
   this.initialTiling = initialTiling;
   this.substitutionTiles = substitutionTiles;
-  this.numColors = substitutionTiles.length;
 
   // Recursively create a substitution tiling matrix.
   this.iterate = function(maxIteration, iteration=0, previousTiling=this.initialTiling) {
@@ -119,7 +118,7 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
           continue;
         }
         matrix[i][j] = parseInt(s[k]);
-        if (matrix[i][j] >= numColors) {
+        if (matrix[i][j] >= this.substitutionTiles.length) {
           matrix[i][j] = 0;
         }
         k++;
@@ -142,7 +141,7 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
             continue;
           }
           matrix[i][j][k] = parseInt(s[l]);
-          if (matrix[i][j][k] >= numColors) {
+          if (matrix[i][j][k] >= this.substitutionTiles.length) {
             matrix[i][j][k] = 0;
           }
           l++;
