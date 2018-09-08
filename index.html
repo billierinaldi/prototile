@@ -42,11 +42,16 @@
     <p>
       <label>Min Color</label><input type="color" name="minColor" value="#ffffff">
       <label>Offset Row</label><input class="number" type="number" name="offsetRow" min="0" step="0.5" value="0">
-      <label>Voronoi</label><input type="checkbox" name="useVoronoi">
+      <label>Rotate</label><input class="number" type="number" name="rotate" min="0" max="360" value="0">
     </p>
     <p>
       <label>Max Color</label><input type="color" name="maxColor" value="#000000">
       <label>Offset Column</label><input class="number" type="number" name="offsetColumn" min="0" step="0.5" value="0">
+      <label>Voronoi</label><input type="checkbox" name="useVoronoi">
+    </p>
+    <p>
+      <label></label><label></label>
+      <label></label><label></label>
       <label></label><input class="button" type="submit" value="Update">
     </p>
     <input type="hidden" name="initial" value="0">
@@ -78,6 +83,7 @@ const MIN_COLOR = "minColor";
 const MAX_COLOR = "maxColor"
 const OFFSET_ROW = "offsetRow";
 const OFFSET_COLUMN = "offsetColumn";
+const ROTATE = "rotate";
 const USE_VORONOI = "useVoronoi";
 // INITIAL and SUBSTITUTIONS are already initialized
 
@@ -96,6 +102,7 @@ tilingColors[0].opacity = transparency;
 tilingColors[1].opacity = transparency;
 var substColors = [d3.color("white"), d3.color("black")];
 var useVoronoi = false;
+var tilingSize = 0;
 
 // Substitution tiling creator
 var prototile = new Prototile(
@@ -183,16 +190,16 @@ var updateParams = function() {
     tilingColors.push(interpolator(i / (numColors - 1)));
   }
 
-  // position the copy tiling
-  var row = getFormInput(formContents, OFFSET_ROW);
-  var col = getFormInput(formContents, OFFSET_COLUMN);
-  positionCopyByOffsets(row, col);
-
   prototile.setInitialFromString(getFormInput(formContents, INITIAL));
   prototile.setSubstitutionsFromString(getFormInput(formContents, SUBSTITUTIONS));
 
   reposition();
   redraw();
+
+  // position the copy tiling
+  var row = getFormInput(formContents, OFFSET_ROW);
+  var col = getFormInput(formContents, OFFSET_COLUMN);
+  positionCopyByOffsets(row, col);
 }
 
 // Download the tiling matrix.
@@ -290,28 +297,43 @@ var positionSubstitutionTiles = function() {
   });
 }
 
+// Calculate width of left panel.
+var getLeftPanelWidth = function() {
+  return Math.max(LEFT_PANEL_MIN_WIDTH,
+    Math.max(prototile.initialTiling[0].length, prototile.substitutionTiles[0][0].length)
+      * squareSize + MARGIN_WIDTH + squareSize);
+}
+
 // Position the main tiling.
 var positionTiling = function() {
-  var leftPanelWidth = Math.max(LEFT_PANEL_MIN_WIDTH,
-    Math.max(prototile.initialTiling[0].length, prototile.substitutionTiles[0][0].length) * squareSize + MARGIN_WIDTH + squareSize);
   svg.select("#" + TILING)
-    .attr("transform", "translate(" + leftPanelWidth + ", " + 0 + ")");
+    .attr("transform", "translate(" + getLeftPanelWidth() + ", " + 0 + ")");
 }
 
 // Position the copy tiling from the offset values.
 var positionCopyByOffsets = function(row, col) {
+  var angle = document.getElementById(FORM_ID).elements[ROTATE].value;
+  var cx = getLeftPanelWidth() + tilingSize / 2;
+  var cy = tilingSize / 2;
   svg.select("#" + COPY)
     .transition()
-    .attr("transform", function(d, i) { return "translate(" + col * squareSize + "," + row * squareSize + ")"; });
+    .attr("transform", function(d) {
+      return "translate(" + col * squareSize + " " + row * squareSize + ") rotate(" + angle + " " + cx + " " + cy + ")";
+    });
 }
 
 // Position the copy tiling from a mouse position.
 var positionCopyByMouse = function(x, y) {
   x = roundToHalfSquare(x);
   y = roundToHalfSquare(y);
+  var angle = document.getElementById(FORM_ID).elements[ROTATE].value;
+  var cx = getLeftPanelWidth() + tilingSize / 2;
+  var cy = tilingSize / 2;
   svg.select("#" + COPY)
     .transition()
-    .attr("transform", function(d, i) { return "translate(" + x + "," + y + ")"; });
+    .attr("transform", function(d) {
+      return "translate(" + x + " " + y + ") rotate(" + angle + " " + cx + " " + cy + ")";
+    });
   document.getElementById(FORM_ID).elements[OFFSET_ROW].value = y / squareSize;
   document.getElementById(FORM_ID).elements[OFFSET_COLUMN].value = x / squareSize;
 }
@@ -335,6 +357,7 @@ var displayTiling = function(name, data) {
   var tilingGroup = svg.select("#" + name);
 
   if (name == TILING) {
+    tilingSize = data.length * squareSize;
     // set max offsets
     document.getElementById(FORM_ID).elements[OFFSET_ROW].max = data.length;
     document.getElementById(FORM_ID).elements[OFFSET_COLUMN].max = data[0].length;
@@ -342,7 +365,7 @@ var displayTiling = function(name, data) {
     if (useVoronoi) {
       var voronoi = d3.voronoi();
       var points = prototile.getTilingAsPoints(data, squareSize);
-      voronoi.extent([[0, 0], [data.length * squareSize, data.length * squareSize]]);
+      voronoi.extent([[0, 0], [tilingSize, tilingSize]]);
       var diagram = voronoi(points);
       var polygons = diagram.polygons();
       tilingGroup.selectAll("g").remove();
