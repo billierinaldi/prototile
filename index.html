@@ -18,6 +18,7 @@
   <title>prototile-js</title>
   <link rel="stylesheet" type="text/css" href="prototile.css">
   <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://d3js.org/d3-voronoi.v1.min.js"></script>
   <script src="prototile.js"></script>
 </head>
 <body>
@@ -41,11 +42,12 @@
     <p>
       <label>Min Color</label><input type="color" name="minColor" value="#ffffff">
       <label>Offset Row</label><input class="number" type="number" name="offsetRow" min="0" step="0.5" value="0">
+      <label>Voronoi</label><input type="checkbox" name="useVoronoi">
     </p>
     <p>
       <label>Max Color</label><input type="color" name="maxColor" value="#000000">
       <label>Offset Column</label><input class="number" type="number" name="offsetColumn" min="0" step="0.5" value="0">
-      <label></label><input class="button" type="submit" onclick="updateParams()" value="Update">
+      <label></label><input class="button" type="submit" value="Update">
     </p>
     <input type="hidden" name="initial" value="0">
     <input type="hidden" name="substitutions" value="0010001110110110111000100,1101110001001001000111011">
@@ -76,6 +78,7 @@ const MIN_COLOR = "minColor";
 const MAX_COLOR = "maxColor"
 const OFFSET_ROW = "offsetRow";
 const OFFSET_COLUMN = "offsetColumn";
+const USE_VORONOI = "useVoronoi";
 // INITIAL and SUBSTITUTIONS are already initialized
 
 // Layout constants
@@ -92,6 +95,7 @@ var tilingColors = [d3.color("white"), d3.color("black")];
 tilingColors[0].opacity = transparency;
 tilingColors[1].opacity = transparency;
 var substColors = [d3.color("white"), d3.color("black")];
+var useVoronoi = false;
 
 // Substitution tiling creator
 var prototile = new Prototile(
@@ -119,6 +123,11 @@ var populateFormFromURL = function() {
       formContents.elements[match[1]].value = match[2];
     }
     match = regex.exec(url);
+  }
+  if (url.includes(USE_VORONOI + "=on")) {
+    formContents.elements[USE_VORONOI].checked = true;
+  } else {
+    formContents.elements[USE_VORONOI].checked = false;
   }
   updateParams();
 }
@@ -152,6 +161,8 @@ var updateParams = function() {
   iterations = getFormInputInt(formContents, NUM_ITERATIONS);
   squareSize = getFormInputInt(formContents, SQUARE_SIZE);
 
+  useVoronoi = formContents.elements[USE_VORONOI].checked;
+
   transparency = getFormInput(formContents, TRANSPARENCY);
   var hexColor0 = d3.color(formContents.elements[MIN_COLOR].value)
   var hexColor1 = d3.color(formContents.elements[MAX_COLOR].value);
@@ -175,7 +186,7 @@ var updateParams = function() {
   // position the copy tiling
   var row = getFormInput(formContents, OFFSET_ROW);
   var col = getFormInput(formContents, OFFSET_COLUMN);
-  positionCopy(row, col);
+  positionCopyByOffsets(row, col);
 
   prototile.setInitialFromString(getFormInput(formContents, INITIAL));
   prototile.setSubstitutionsFromString(getFormInput(formContents, SUBSTITUTIONS));
@@ -225,7 +236,14 @@ var initialize = function() {
 
   // group for main tiling
   var tilingGroup = svg.append("g")
-    .attr("id", TILING);
+    .attr("id", TILING)
+    .attr("style", "pointer-events: bounding-box;")
+    .on("click", function(d) {
+      var position = [0, 0];
+      position = d3.mouse(this);
+      positionCopyByMouse(position[0], position[1]);
+    });
+    ;
   addBorder(tilingGroup, TILING);
   positionTiling();
 }
@@ -280,11 +298,27 @@ var positionTiling = function() {
     .attr("transform", "translate(" + leftPanelWidth + ", " + 0 + ")");
 }
 
-// Position the copy tiling.
-var positionCopy = function(row, col) {
+// Position the copy tiling from the offset values.
+var positionCopyByOffsets = function(row, col) {
   svg.select("#" + COPY)
     .transition()
     .attr("transform", function(d, i) { return "translate(" + col * squareSize + "," + row * squareSize + ")"; });
+}
+
+// Position the copy tiling from a mouse position.
+var positionCopyByMouse = function(x, y) {
+  x = roundToHalfSquare(x);
+  y = roundToHalfSquare(y);
+  svg.select("#" + COPY)
+    .transition()
+    .attr("transform", function(d, i) { return "translate(" + x + "," + y + ")"; });
+  document.getElementById(FORM_ID).elements[OFFSET_ROW].value = y / squareSize;
+  document.getElementById(FORM_ID).elements[OFFSET_COLUMN].value = x / squareSize;
+}
+
+// Round position to nearest half square size.
+var roundToHalfSquare = function(x) {
+  return Math.round(x / (squareSize / 2)) * (squareSize / 2);
 }
 
 // Redraw initial, substitution, and main tiling.
@@ -304,6 +338,27 @@ var displayTiling = function(name, data) {
     // set max offsets
     document.getElementById(FORM_ID).elements[OFFSET_ROW].max = data.length;
     document.getElementById(FORM_ID).elements[OFFSET_COLUMN].max = data[0].length;
+
+    if (useVoronoi) {
+      var voronoi = d3.voronoi();
+      var points = prototile.getTilingAsPoints(data, squareSize);
+      voronoi.extent([[0, 0], [data.length * squareSize, data.length * squareSize]]);
+      var diagram = voronoi(points);
+      var polygons = diagram.polygons();
+      tilingGroup.selectAll("g").remove();
+      var pointGroups = tilingGroup.selectAll("g")
+        .data(points)
+        .enter().append("g");
+      pointGroups.append("circle")
+        .attr("cx", function(d) { return d[0]; })
+        .attr("cy", function(d) { return d[1]; })
+        .attr("r", 1)
+        .attr("style", "fill:" + substColors[substColors.length - 1]);
+      pointGroups.append("svg:path")
+        .attr("d", function(d, i) { return "M" + polygons[i].join("L") + "Z"; })
+        .attr("style", "fill:none; stroke:" + substColors[substColors.length - 1]);
+      return;
+    }
   }
 
   // add row group for each row of data
@@ -347,9 +402,7 @@ var displayTiling = function(name, data) {
         redraw();
       } else if (name == TILING) {
         // clicking on the main tiling translates the copy
-        positionCopy(row, col);
-        document.getElementById(FORM_ID).elements[OFFSET_ROW].value = row;
-        document.getElementById(FORM_ID).elements[OFFSET_COLUMN].value = col;
+        // handled by generic on click handler
       } else if (name.startsWith(SUBSTITUTION_PREFIX)) {
         // clicking on a square in the substitution tiles changes its color
         var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
@@ -357,7 +410,7 @@ var displayTiling = function(name, data) {
         document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
         redraw();
       }
-    })
+    });
 
     // resize border rectangle to fit new dimensions
     svg.select("#" + name + "Border")

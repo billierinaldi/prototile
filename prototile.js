@@ -60,14 +60,14 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
     return this.iterate(maxIteration, iteration + 1, nextIteration);
   };
 
-  // Get tiling as points.
-  this.getTilingAsPoints = function(maxIteration) {
-    var matrix = this.iterate(maxIteration);
+  // Convert tiling to points.
+  this.getTilingAsPoints = function(matrix, squareSize) {
+    var offset = squareSize / 2;
     var points = [];
     matrix.forEach(function(row, i) {
       row.forEach(function(cell, j) {
         if (cell > 0) {
-          points.push([i, j]);
+          points.push([i * squareSize + offset, j * squareSize + offset]);
         }
       });
     });
