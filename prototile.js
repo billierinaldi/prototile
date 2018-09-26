@@ -153,6 +153,18 @@ function Prototile(initialTiling=[[]], substitutionTiles=[[[]]]) {
     }
   }
 
+  // Set substitutions using modulo from substitution 0.
+  this.setModSubstitutions = function() {
+    var matrix = this.substitutionTiles;
+    for (var i = 1; i < matrix.length; i++) {
+      for (var j = 0; j < matrix[i].length; j++) {
+        for (var k = 0; k < matrix[i][j].length; k++) {
+          matrix[i][j][k] = (matrix[i-1][j][k] + 1) % matrix.length;
+        }
+      }
+    }
+  }
+
   // Resize the initial tiling.
   this.resizeInitialTiling = function(x, y) {
     resize(this.initialTiling, x, y);

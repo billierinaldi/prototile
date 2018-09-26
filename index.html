@@ -30,29 +30,28 @@
 
   <form id="paramsForm" action="index.html">
     <p>
-      <label># Colors</label><input class="number" type="number" name="numColors" min="2" max="10" value="2">
-      <label>Initial Size</label><input class="number" type="number" name="initialSize" min="1" max="20" value="1">
-      <label>Square Size</label><input class="number" type="number" name="squareSize" min="1" max="50" value="10">
+      <label># Colors</label><input class="number" type="number" name="numColors" min="2" max="10" value="2" onChange="this.form.submit()">
+      <label>Initial Size</label><input class="number" type="number" name="initialSize" min="1" max="20" value="1" onChange="this.form.submit()">
+      <label>Square Size</label><input class="number" type="number" name="squareSize" min="1" max="50" value="10" onChange="this.form.submit()">
     </p>
     <p>
-      <label># Iterations</label><input class="number" type="number" name="iterations" min="0" max="4" value="2">
-      <label>Substition Size</label><input class="number" type="number" name="substSize" min="2" max="20" value="5">
-      <label>Transparency</label><input class="number" type="number" name="transparency" min="0" max="1" step="0.1" value="0.5">
+      <label># Iterations</label><input class="number" type="number" name="iterations" min="0" max="4" value="2" onChange="this.form.submit()">
+      <label>Substitution Size</label><input class="number" type="number" name="substSize" min="2" max="20" value="5" onChange="this.form.submit()">
+      <label>Transparency</label><input class="number" type="number" name="transparency" min="0" max="1" step="0.1" value="0.5" onChange="this.form.submit()">
     </p>
     <p>
-      <label>Min Color</label><input type="color" name="minColor" value="#ffffff">
-      <label>Offset Row</label><input class="number" type="number" name="offsetRow" min="0" step="0.5" value="0">
-      <label>Rotate</label><input class="number" type="number" name="rotate" min="0" max="360" value="0">
+      <label>Min Color</label><input type="color" name="minColor" value="#ffffff" onChange="this.form.submit()">
+      <label>Offset Row</label><input class="number" type="number" name="offsetRow" min="0" step="0.5" value="0" onChange="this.form.submit()">
+      <label>Rotate</label><input class="number" type="number" name="rotate" min="0" max="360" value="0" onChange="this.form.submit()">
     </p>
     <p>
-      <label>Max Color</label><input type="color" name="maxColor" value="#000000">
-      <label>Offset Column</label><input class="number" type="number" name="offsetColumn" min="0" step="0.5" value="0">
-      <label>Voronoi</label><input type="checkbox" name="useVoronoi">
+      <label>Max Color</label><input type="color" name="maxColor" value="#000000" onChange="this.form.submit()">
+      <label>Offset Column</label><input class="number" type="number" name="offsetColumn" min="0" step="0.5" value="0" onChange="this.form.submit()">
+      <label>Voronoi</label><input type="checkbox" name="useVoronoi" onChange="this.form.submit()">
     </p>
     <p>
       <label></label><label></label>
-      <label></label><label></label>
-      <label></label><input class="button" type="submit" value="Update">
+      <label>Mod Substitutions</label><input type="checkbox" name="modSubsts" onChange="this.form.submit()">
     </p>
     <input type="hidden" name="initial" value="0">
     <input type="hidden" name="substitutions" value="0010001110110110111000100,1101110001001001000111011">
@@ -85,6 +84,7 @@ const OFFSET_ROW = "offsetRow";
 const OFFSET_COLUMN = "offsetColumn";
 const ROTATE = "rotate";
 const USE_VORONOI = "useVoronoi";
+const MOD_SUBSTS = "modSubsts";
 // INITIAL and SUBSTITUTIONS are already initialized
 
 // Layout constants
@@ -102,6 +102,7 @@ tilingColors[0].opacity = transparency;
 tilingColors[1].opacity = transparency;
 var substColors = [d3.color("white"), d3.color("black")];
 var useVoronoi = false;
+var modSubsts = true;
 var tilingSize = 0;
 
 // Substitution tiling creator
@@ -123,6 +124,12 @@ var svg = d3.select("svg");
 var populateFormFromURL = function() {
   var formContents = document.getElementById(FORM_ID);
   var url = decodeURIComponent(window.location.search);
+  if (url.length == 0) {
+    // handle default value of mod substitutions specially
+    // it is less confusing to see it switch from unchecked to checked than vice versa
+    formContents.elements[MOD_SUBSTS].checked = modSubsts;
+    return;
+  }
   var regex = /[?&]([a-zA-Z]+)=([0-9,]+(.5)?|#[0-9a-fA-F]{6})/g;
   var match = regex.exec(url);
   while (match != null) {
@@ -131,11 +138,13 @@ var populateFormFromURL = function() {
     }
     match = regex.exec(url);
   }
-  if (url.includes(USE_VORONOI + "=on")) {
-    formContents.elements[USE_VORONOI].checked = true;
-  } else {
-    formContents.elements[USE_VORONOI].checked = false;
-  }
+  [USE_VORONOI, MOD_SUBSTS].forEach(function(name) {
+    if (url.includes(name + "=on")) {
+      formContents.elements[name].checked = true;
+    } else {
+      formContents.elements[name].checked = false;
+    }
+  });
   updateParams();
 }
 
@@ -169,6 +178,7 @@ var updateParams = function() {
   squareSize = getFormInputInt(formContents, SQUARE_SIZE);
 
   useVoronoi = formContents.elements[USE_VORONOI].checked;
+  modSubsts = formContents.elements[MOD_SUBSTS].checked;
 
   transparency = getFormInput(formContents, TRANSPARENCY);
   var hexColor0 = d3.color(formContents.elements[MIN_COLOR].value)
@@ -192,6 +202,9 @@ var updateParams = function() {
 
   prototile.setInitialFromString(getFormInput(formContents, INITIAL));
   prototile.setSubstitutionsFromString(getFormInput(formContents, SUBSTITUTIONS));
+  if (modSubsts) {
+    prototile.setModSubstitutions();
+  }
 
   reposition();
   redraw();
@@ -422,16 +435,22 @@ var displayTiling = function(name, data) {
         // clicking on a square in the initial tiling changes its color
         prototile.initialTiling[row][col] = (prototile.initialTiling[row][col] + 1) % numColors;
         document.getElementById(FORM_ID).elements[INITIAL].value = prototile.getInitialTilingAsString();
-        redraw();
+        document.getElementById(FORM_ID).submit();
       } else if (name == TILING) {
         // clicking on the main tiling translates the copy
         // handled by generic on click handler
       } else if (name.startsWith(SUBSTITUTION_PREFIX)) {
         // clicking on a square in the substitution tiles changes its color
-        var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
-        prototile.substitutionTiles[substIndex][row][col] = (prototile.substitutionTiles[substIndex][row][col] + 1) % numColors;
+        if (modSubsts) {
+          for (var k = 0; k < numColors; k++) {
+            prototile.substitutionTiles[k][row][col] = (prototile.substitutionTiles[k][row][col] + 1) % numColors;
+          }
+        } else {
+          var substIndex = parseInt(name.substring(SUBSTITUTION_PREFIX.length));
+          prototile.substitutionTiles[substIndex][row][col] = (prototile.substitutionTiles[substIndex][row][col] + 1) % numColors;
+        }
         document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
-        redraw();
+        document.getElementById(FORM_ID).submit();
       }
     });
 
