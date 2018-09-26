@@ -33,6 +33,8 @@ The upper left square of the copy tiling will be placed over the square that is 
 This will produce new patterns in the overlapping region of the two tilings.
 Shifts can also be achieved by editing the Offset Row and Offset Column parameters in the form.
 Half-step shifts are allowed.
+NOTE that offsets are not automatically filled into the URL parameters.
+Double click on the main tiling to fill offsets into the URL parameters.
 * When changes are made, the URL will be filled in with the current form parameters.
 This URL can be bookmarked to retrieve the altered tiling.
 The form parameter names and formats are described in the Tiling Parameters section.

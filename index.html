@@ -263,8 +263,10 @@ var initialize = function() {
       var position = [0, 0];
       position = d3.mouse(this);
       positionCopyByMouse(position[0], position[1]);
+    })
+    .on("dblclick", function(d) {
+      document.getElementById(FORM_ID).submit();
     });
-    ;
   addBorder(tilingGroup, TILING);
   positionTiling();
 }
