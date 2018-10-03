@@ -51,15 +51,20 @@
       <label>Voronoi</label><input type="checkbox" name="useVoronoi" onChange="this.form.submit()">
     </p>
     <p>
-      <label></label><label></label>
-      <label>Mod Substitutions</label><input type="checkbox" name="modSubsts" onChange="this.form.submit()">
+      <label>Shift Substs</label><span>
+        <i class="carat l" onclick="shiftSubsLeft()"></i>
+        <i class="carat r" onclick="shiftSubsRight()"></i>
+        <i class="carat u" onclick="shiftSubsUp()"></i>
+        <i class="carat d" onclick="shiftSubsDown()"></i>
+      </span>
+      <label>Mod Substs</label><input type="checkbox" name="modSubsts" onChange="this.form.submit()">
     </p>
     <input type="hidden" name="initial" value="0">
     <input type="hidden" name="substitutions" value="0010001110110110111000100,1101110001001001000111011">
   </form><br>
 
   <div class="svg-container">
-    <svg version="1.1" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMin meet" class="svg-content"></svg>
+    <svg version="1.1" viewBox="0 0 700 700" preserveAspectRatio="xMinYMin meet" class="svg-content"></svg>
   </div>
 
   <script>
@@ -352,6 +357,46 @@ var positionCopyByMouse = function(x, y) {
     });
   document.getElementById(FORM_ID).elements[OFFSET_ROW].value = y / squareSize;
   document.getElementById(FORM_ID).elements[OFFSET_COLUMN].value = x / squareSize;
+}
+
+// Shift columns of the substitutions left.
+var shiftSubsLeft = function() {
+  prototile.substitutionTiles.forEach(function(matrix) {
+    matrix.forEach(function(row) {
+      row.push(row.shift());
+    });
+  });
+  document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
+  document.getElementById(FORM_ID).submit();
+}
+
+// Shift columns of the substitutions right.
+var shiftSubsRight = function() {
+  prototile.substitutionTiles.forEach(function(matrix) {
+    matrix.forEach(function(row) {
+      row.unshift(row.pop());
+    });
+  });
+  document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
+  document.getElementById(FORM_ID).submit();
+}
+
+// Shift rows of the substitutions up.
+var shiftSubsUp = function() {
+  prototile.substitutionTiles.forEach(function(matrix) {
+    matrix.push(matrix.shift());
+  });
+  document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
+  document.getElementById(FORM_ID).submit();
+}
+
+// Shift rows of the substitutions down.
+var shiftSubsDown = function() {
+  prototile.substitutionTiles.forEach(function(matrix) {
+    matrix.unshift(matrix.pop());
+  });
+  document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
+  document.getElementById(FORM_ID).submit();
 }
 
 // Round position to nearest half square size.
