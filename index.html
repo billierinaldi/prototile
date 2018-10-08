@@ -28,6 +28,7 @@
     <a class="manual" href="https://github.com/billierinaldi/prototile">View Code</a>
     <a class="manual" onclick="downloadMatrix()" href="javascript:void(0);">Download Tiling Matrix</a>
     <a class="manual" href="index.html">Reset</a>
+    <a class="manual" onclick="clearSubsts()" href="javascript:void(0);">Clear</a>
   </p><br>
 
   <form id="paramsForm" action="index.html">
@@ -221,6 +222,14 @@ var updateParams = function() {
   var row = getFormInput(formContents, OFFSET_ROW);
   var col = getFormInput(formContents, OFFSET_COLUMN);
   positionCopyByOffsets(row, col);
+}
+
+// Set all the squares of substitution 0 to min color, 0.
+var clearSubsts = function() {
+  prototile.setSubstitutionsFromString("0");
+  prototile.setModSubstitutions();
+  document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
+  document.getElementById(FORM_ID).submit();
 }
 
 // Download the tiling matrix.
