@@ -33,24 +33,24 @@
 
   <form id="paramsForm" action="index.html">
     <p>
-      <label># Colors</label><input class="number" type="number" name="numColors" min="2" max="10" value="2" onChange="this.form.submit()">
-      <label>Initial Size</label><input class="number" type="number" name="initialSize" min="1" max="20" value="1" onChange="this.form.submit()">
-      <label>Square Size</label><input class="number" type="number" name="squareSize" min="1" max="50" value="10" onChange="this.form.submit()">
+      <label># Colors</label><input class="number" type="number" name="numColors" min="2" max="10" value="2" onChange="updateParams()">
+      <label>Initial Size</label><input class="number" type="number" name="initialSize" min="1" max="20" value="1" onChange="updateParams()">
+      <label>Square Size</label><input class="number" type="number" name="squareSize" min="1" max="50" value="10" onChange="updateParams()">
     </p>
     <p>
-      <label># Iterations</label><input class="number" type="number" name="iterations" min="0" max="4" value="2" onChange="this.form.submit()">
-      <label>Substitution Size</label><input class="number" type="number" name="substSize" min="2" max="20" value="5" onChange="this.form.submit()">
-      <label>Transparency</label><input class="number" type="number" name="transparency" min="0" max="1" step="0.1" value="0.5" onChange="this.form.submit()">
+      <label># Iterations</label><input class="number" type="number" name="iterations" min="0" max="4" value="2" onChange="updateParams()">
+      <label>Substitution Size</label><input class="number" type="number" name="substSize" min="2" max="20" value="5" onChange="updateParams()">
+      <label>Transparency</label><input class="number" type="number" name="transparency" min="0.1" max="1" step="0.1" value="0.5" onChange="updateParams()">
     </p>
     <p>
-      <label>Min Color</label><input type="color" name="minColor" value="#ffffff" onChange="this.form.submit()">
-      <label>Offset Row</label><input class="number" type="number" name="offsetRow" min="0" step="0.5" value="0" onChange="this.form.submit()">
-      <label>Rotate</label><input class="number" type="number" name="rotate" min="0" max="360" value="0" onChange="this.form.submit()">
+      <label>Min Color</label><input type="color" name="minColor" value="#ffffff" onChange="updateParams()">
+      <label>Offset Row</label><input class="number" type="number" name="offsetRow" min="0" step="0.5" value="0" onChange="updateParams()">
+      <label>Rotate</label><input class="number" type="number" name="rotate" min="0" max="360" value="0" onChange="updateParams()">
     </p>
     <p>
-      <label>Max Color</label><input type="color" name="maxColor" value="#000000" onChange="this.form.submit()">
-      <label>Offset Column</label><input class="number" type="number" name="offsetColumn" min="0" step="0.5" value="0" onChange="this.form.submit()">
-      <label>Voronoi</label><input type="checkbox" name="useVoronoi" onChange="this.form.submit()">
+      <label>Max Color</label><input type="color" name="maxColor" value="#000000" onChange="updateParams()">
+      <label>Offset Column</label><input class="number" type="number" name="offsetColumn" min="0" step="0.5" value="0" onChange="updateParams()">
+      <label>Voronoi</label><input type="checkbox" name="useVoronoi" onChange="updateParams()">
     </p>
     <p>
       <label>Shift Substs</label><span>
@@ -59,7 +59,9 @@
         <i class="carat u" onclick="shiftSubsUp()"></i>
         <i class="carat d" onclick="shiftSubsDown()"></i>
       </span>
-      <label>Mod Substs</label><input type="checkbox" name="modSubsts" onChange="this.form.submit()">
+      <label>Mod Substs</label><input type="checkbox" name="modSubsts" onChange="updateParams()">
+      <label></label><input class="button" type="submit" value="Update URL">
+      <label id="needsUpdate"></label>
     </p>
     <input type="hidden" name="initial" value="0">
     <input type="hidden" name="substitutions" value="0010001110110110111000100,1101110001001001000111011">
@@ -77,7 +79,8 @@ const SUBSTITUTION_PREFIX = "subst";
 const TILING = "tiling";
 const COPY = "copy";
 
-const FORM_ID = "paramsForm"
+const FORM_ID = "paramsForm";
+const NEEDS_UPDATE_ID = "needsUpdate";
 
 // Names for the form inputs
 const NUM_COLORS = "numColors";
@@ -139,7 +142,7 @@ var populateFormFromURL = function() {
     formContents.elements[MOD_SUBSTS].checked = modSubsts;
     return;
   }
-  var regex = /[?&]([a-zA-Z]+)=([0-9,]+(.5)?|#[0-9a-fA-F]{6})/g;
+  var regex = /[?&]([a-zA-Z]+)=([0-9,]+(.[1-9])?|#[0-9a-fA-F]{6})/g;
   var match = regex.exec(url);
   while (match != null) {
     if (formContents.elements[match[1]]) {
@@ -154,7 +157,7 @@ var populateFormFromURL = function() {
       formContents.elements[name].checked = false;
     }
   });
-  updateParams();
+  updateParams(false);
 }
 
 // Get form element value as an int.
@@ -168,7 +171,12 @@ var getFormInput = function(formContents, name) {
 }
 
 // Read the tiling parameters from the form and update the display.
-var updateParams = function() {
+var updateParams = function(needsUpdate=true) {
+  if (needsUpdate) {
+    // Advise user that current parameters may not be reflected in the URL.
+    document.getElementById(NEEDS_UPDATE_ID).innerHTML = "Parameters changed<br>since last update!"
+  }
+
   var formContents = document.getElementById(FORM_ID);
 
   numColors = getFormInputInt(formContents, NUM_COLORS);
@@ -229,7 +237,7 @@ var clearSubsts = function() {
   prototile.setSubstitutionsFromString("0");
   prototile.setModSubstitutions();
   document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
-  document.getElementById(FORM_ID).submit();
+  updateParams();
 }
 
 // Download the tiling matrix.
@@ -378,7 +386,7 @@ var shiftSubsLeft = function() {
     });
   });
   document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
-  document.getElementById(FORM_ID).submit();
+  updateParams();
 }
 
 // Shift columns of the substitutions right.
@@ -389,7 +397,7 @@ var shiftSubsRight = function() {
     });
   });
   document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
-  document.getElementById(FORM_ID).submit();
+  updateParams();
 }
 
 // Shift rows of the substitutions up.
@@ -398,7 +406,7 @@ var shiftSubsUp = function() {
     matrix.push(matrix.shift());
   });
   document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
-  document.getElementById(FORM_ID).submit();
+  updateParams();
 }
 
 // Shift rows of the substitutions down.
@@ -407,7 +415,7 @@ var shiftSubsDown = function() {
     matrix.unshift(matrix.pop());
   });
   document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
-  document.getElementById(FORM_ID).submit();
+  updateParams();
 }
 
 // Round position to nearest half square size.
@@ -496,7 +504,7 @@ var displayTiling = function(name, data) {
         // clicking on a square in the initial tiling changes its color
         prototile.initialTiling[row][col] = (prototile.initialTiling[row][col] + 1) % numColors;
         document.getElementById(FORM_ID).elements[INITIAL].value = prototile.getInitialTilingAsString();
-        document.getElementById(FORM_ID).submit();
+        updateParams();
       } else if (name == TILING) {
         // clicking on the main tiling translates the copy
         // handled by generic on click handler
@@ -511,7 +519,7 @@ var displayTiling = function(name, data) {
           prototile.substitutionTiles[substIndex][row][col] = (prototile.substitutionTiles[substIndex][row][col] + 1) % numColors;
         }
         document.getElementById(FORM_ID).elements[SUBSTITUTIONS].value = prototile.getSubstitutionsAsString();
-        document.getElementById(FORM_ID).submit();
+        updateParams();
       }
     });
 

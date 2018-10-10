@@ -60,6 +60,13 @@ label {
   text-align: right;
   padding: 5px 10px;
 }
+label#needsUpdate {
+  color: red;
+  font-size: 9px;
+  text-align: left;
+  vertical-align: middle;
+  padding: 0px 5px 0px 5px;
+}
 span {
   display: table-cell;
   border: solid #D3D3D3 1px;
@@ -74,21 +81,21 @@ input.number {
 input.button {
   display: inline-block;
   padding: 5px 10px;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   color: #fff;
-  background-color: #4CAF50;
+  background-color: slateblue;
   outline: none;
   border: none;
   border-radius: 10px;
-  box-shadow: 0 4px #aaa;
+  box-shadow: 0 3px darkslateblue;
 }
 input.button:hover {
-  background-color: #3e8e41
+  background-color: mediumslateblue;
 }
 input.button:active {
-  background-color: #3e8e41;
-  box-shadow: 0 3px #999;
+  background-color: mediumslateblue;
+  box-shadow: 0 2px darkslateblue;
   transform: translateY(1px);
 }
 .carat {
