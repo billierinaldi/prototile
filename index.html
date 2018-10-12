@@ -60,6 +60,7 @@
         <i class="carat d" onclick="shiftSubsDown()"></i>
       </span>
       <label>Mod Substs</label><input type="checkbox" name="modSubsts" onChange="updateParams()">
+      <label>Hide Updates</label><input type="checkbox" name="hideUpdates" onChange="updateParams(false)">
       <label></label><input class="button" type="submit" value="Update URL">
       <label id="needsUpdate"></label>
     </p>
@@ -96,6 +97,7 @@ const OFFSET_COLUMN = "offsetColumn";
 const ROTATE = "rotate";
 const USE_VORONOI = "useVoronoi";
 const MOD_SUBSTS = "modSubsts";
+const HIDE_UPDATES = "hideUpdates";
 // INITIAL and SUBSTITUTIONS are already initialized
 
 // Layout constants
@@ -115,6 +117,7 @@ tilingColors[1].opacity = transparency;
 var substColors = [d3.color("white"), d3.color("black")];
 var useVoronoi = false;
 var modSubsts = true;
+var hideUpdates = false;
 var tilingSize = 0;
 
 // Substitution tiling creator
@@ -429,7 +432,9 @@ var redraw = function() {
   prototile.substitutionTiles.forEach(function(d, i) {
     displayTiling(SUBSTITUTION_PREFIX + i, d);
   })
-  displayTiling(TILING, prototile.iterate(iterations));
+  if (!document.getElementById(FORM_ID).elements[HIDE_UPDATES].checked) {
+    displayTiling(TILING, prototile.iterate(iterations));
+  }
 }
 
 // Display a tiling based on matrix data.
